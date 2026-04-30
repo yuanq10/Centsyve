@@ -1,0 +1,47 @@
+# ── Secrets & environment ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python / Backend ─────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# ── Node / Frontend ──────────────────────────────────────────────────────────
+node_modules/
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# ── Expo ─────────────────────────────────────────────────────────────────────
+.expo/
+web-build/
+expo-env.d.ts
+
+# ── Credentials & certificates ───────────────────────────────────────────────
+*.json
+!package.json
+!package-lock.json
+*.jks
+*.p8
+*.p12
+*.mobileprovision
+*.pem
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── IDE ──────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.tsbuildinfo
+
+# ── Claude Code ──────────────────────────────────────────────────────────────
+.claude/
