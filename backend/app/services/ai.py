@@ -4,6 +4,7 @@ All functions receive the user's transaction list and return plain text response
 """
 
 import anthropic
+from anthropic import APIError
 from app.core.config import settings
 
 _SYSTEM_PROMPT = """You are Centsyve AI, a friendly and practical personal finance advisor.
@@ -64,12 +65,15 @@ Please provide a spending analysis that includes:
 
 Keep the response friendly and under 300 words."""
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=600,
-        system=_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    try:
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=600,
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except APIError as e:
+        raise RuntimeError(f"Anthropic API error: {e.message}")
     return message.content[0].text
 
 
@@ -89,12 +93,15 @@ Based on this data, provide personalised budget recommendations:
 
 Keep the response practical and under 250 words."""
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=500,
-        system=_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
+    try:
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except APIError as e:
+        raise RuntimeError(f"Anthropic API error: {e.message}")
     return message.content[0].text
 
 
@@ -109,10 +116,13 @@ def chat(user_message: str, transactions: list) -> str:
 ---
 User question: {user_message}"""
 
-    message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=400,
-        system=_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": context}],
-    )
+    try:
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=400,
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": context}],
+        )
+    except APIError as e:
+        raise RuntimeError(f"Anthropic API error: {e.message}")
     return message.content[0].text
