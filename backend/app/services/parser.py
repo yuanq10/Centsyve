@@ -127,18 +127,43 @@ def _parse_date(text: str) -> Optional[date]:
 
 _SKIP_LINE = re.compile(
     r"(?i)^\s*("
-    r"receipt|invoice|tax\s*invoice|bill|statement|"   # document types
-    r"date|time|tel|phone|fax|www\.|http|email|"       # contact info
-    r"thank\s*you|welcome|please|visit|"               # pleasantries
-    r"\d{3,}|"                                          # lines starting with long numbers
-    r"[\d\s\W]{4,}"                                    # lines that are mostly punctuation/numbers
+    r"receipt|invoice|tax\s*invoice|bill|statement|"
+    r"date|time|tel|phone|fax|www\.|http|email|"
+    r"thank\s*you|welcome|please|visit|"
+    r"store|branch|location|cashier|server|terminal|"
+    r"open\s+\d|hours?|order\s*#?|transaction|"
+    r"\d{3,}|"
+    r"[\d\s\W]{4,}"
     r")"
 )
 _ADDRESS_LINE = re.compile(r"\b(st|ave|blvd|rd|dr|ln|way|suite|ste|floor|fl|unit)\b", re.I)
+_CITY_STATE_ZIP = re.compile(r"\b[A-Z]{2}\s+\d{5}\b|\b\d{5}(-\d{4})?\b")
+_PHONE_LINE = re.compile(r"\b\d{3}[\s.\-]\d{3}[\s.\-]\d{4}\b|\(\d{3}\)\s*\d{3}")
+_STORE_ID_LINE = re.compile(r"(?i)\b(store|branch|location|shop|unit)\s*#?\s*\d+\b")
+
+_BUSINESS_SUFFIX = re.compile(
+    r"(?i)\b(inc|llc|corp|ltd|co\.|cafe|coffee|restaurant|market|"
+    r"store|shop|bar|grill|diner|pharmacy|hospital|clinic|gym|"
+    r"salon|hotel|inn|express|kitchen|bakery|pizza|sushi|burger)\b"
+)
+
+
+def _merchant_score(line: str) -> int:
+    score = 0
+    letter_ratio = sum(c.isalpha() for c in line) / max(len(line), 1)
+    score += int(letter_ratio * 3)
+    if line != line.upper():
+        score += 1
+    if _BUSINESS_SUFFIX.search(line):
+        score += 2
+    if any(c.isdigit() for c in line):
+        score -= 1
+    return score
 
 
 def _parse_merchant(text: str) -> Optional[str]:
-    for line in text.splitlines():
+    candidates = []
+    for line in text.splitlines()[:15]:
         line = line.strip()
         if len(line) < 3 or len(line) > 60:
             continue
@@ -146,10 +171,21 @@ def _parse_merchant(text: str) -> Optional[str]:
             continue
         if _ADDRESS_LINE.search(line):
             continue
+        if _CITY_STATE_ZIP.search(line):
+            continue
+        if _PHONE_LINE.search(line):
+            continue
+        if _STORE_ID_LINE.search(line):
+            continue
         if re.match(r"^[\d\s\W]+$", line):
             continue
-        return line
-    return None
+        candidates.append(line)
+        if len(candidates) >= 3:
+            break
+
+    if not candidates:
+        return None
+    return max(candidates, key=_merchant_score)
 
 
 # ═══════════════════════════════════════════════════════════════════

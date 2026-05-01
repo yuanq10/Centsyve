@@ -236,7 +236,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.actionButtonText}>📷  Scan Receipt</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.actionButton, styles.actionButtonOutline]} onPress={() => navigation.navigate("AddTransaction")}>
-          <Text style={[styles.actionButtonText, { color: "#2e7d32" }]}>＋  Add Income</Text>
+          <Text style={[styles.actionButtonText, { color: "#2e7d32" }]}>＋  Add Transaction</Text>
         </TouchableOpacity>
       </View>
       <TouchableOpacity style={styles.aiButton} onPress={() => navigation.navigate("AIAdvisor")}>
