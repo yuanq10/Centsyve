@@ -1,4 +1,5 @@
 import client from "./client";
+import { cacheTransactions } from "../services/offlineStorage";
 
 export const scanReceipt = (imageUri, mimeType = "image/jpeg") => {
   const form = new FormData();
@@ -14,4 +15,8 @@ export const scanReceipt = (imageUri, mimeType = "image/jpeg") => {
 
 export const createTransaction = (data) => client.post("/transactions/", data);
 
-export const listTransactions = () => client.get("/transactions/");
+export const listTransactions = async () => {
+  const res = await client.get("/transactions/");
+  await cacheTransactions(res.data);
+  return res;
+};

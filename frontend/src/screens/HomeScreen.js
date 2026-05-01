@@ -14,14 +14,22 @@ import { useFocusEffect } from "@react-navigation/native";
 import { LineChart } from "react-native-chart-kit";
 import * as ImagePicker from "expo-image-picker";
 import { useAuth } from "../context/AuthContext";
+import { useNetwork } from "../context/NetworkContext";
 import { getSummary, getTrends } from "../api/dashboard";
-import { listTransactions } from "../api/transactions";
+import { listTransactions, createTransaction } from "../api/transactions";
+import {
+  getCachedTransactions,
+  getPendingQueue,
+  clearPendingQueue,
+  computeSummary,
+} from "../services/offlineStorage";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const PERIODS = ["weekly", "monthly", "yearly"];
 
 export default function HomeScreen({ navigation }) {
   const { user, logout } = useAuth();
+  const { isOnline, reportOnline, reportOffline } = useNetwork();
   const [summary, setSummary] = useState(null);
   const [trends, setTrends] = useState(null);
   const [recentTx, setRecentTx] = useState([]);
@@ -29,18 +37,45 @@ export default function HomeScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // Flush any transactions that were created while offline.
+  const syncPending = async () => {
+    const queue = await getPendingQueue();
+    if (queue.length === 0) return;
+    try {
+      for (const tx of queue) {
+        const { _offlineId, _pending, ...data } = tx;
+        await createTransaction(data);
+      }
+      await clearPendingQueue();
+    } catch {
+      // Stay silent — will retry on next successful load.
+    }
+  };
+
   const loadData = useCallback(async (selectedPeriod = period) => {
     try {
+      await syncPending();
       const [summaryRes, trendsRes, txRes] = await Promise.all([
         getSummary(),
         getTrends(selectedPeriod),
         listTransactions(),
       ]);
+      reportOnline();
       setSummary(summaryRes.data);
       setTrends(trendsRes.data);
       setRecentTx(txRes.data.slice(0, 5));
     } catch (e) {
-      // silent — stale data stays visible
+      if (!e.response) {
+        // Network error — fall back to local cache.
+        reportOffline();
+        const cached = await getCachedTransactions();
+        const pending = await getPendingQueue();
+        const all = [...pending, ...cached];
+        setSummary(computeSummary(all));
+        setTrends(null);
+        setRecentTx(all.slice(0, 5));
+      }
+      // Server errors: keep whatever is already on screen.
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -88,6 +123,15 @@ export default function HomeScreen({ navigation }) {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} />}
     >
+      {/* Offline banner */}
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>
+            You're offline — showing cached data. New transactions will sync when you reconnect.
+          </Text>
+        </View>
+      )}
+
       {/* Header */}
       <View style={styles.header}>
         <View>
@@ -133,7 +177,11 @@ export default function HomeScreen({ navigation }) {
       </View>
 
       {/* Trends Chart */}
-      {chartData ? (
+      {!isOnline ? (
+        <View style={styles.emptyChart}>
+          <Text style={styles.emptyText}>Chart unavailable offline</Text>
+        </View>
+      ) : chartData ? (
         <View style={styles.chartBox}>
           <LineChart
             data={chartData}
@@ -166,9 +214,12 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.emptyText}>No transactions yet</Text>
         ) : (
           recentTx.map((tx) => (
-            <View key={tx.id} style={styles.txRow}>
+            <View key={tx.id ?? tx._offlineId} style={styles.txRow}>
               <View>
-                <Text style={styles.txMerchant}>{tx.merchant || tx.category || "Transaction"}</Text>
+                <Text style={styles.txMerchant}>
+                  {tx.merchant || tx.category || "Transaction"}
+                  {tx._pending ? <Text style={styles.pendingLabel}> (pending)</Text> : null}
+                </Text>
                 <Text style={styles.txDate}>{tx.date || "—"}</Text>
               </View>
               <Text style={[styles.txAmount, tx.type === "income" ? styles.incomeText : styles.expenseText]}>
@@ -234,4 +285,7 @@ const styles = StyleSheet.create({
   actionButtonText: { color: "#fff", fontWeight: "600", fontSize: 14 },
   aiButton: { marginHorizontal: 16, marginTop: 12, backgroundColor: "#1a237e", borderRadius: 10, paddingVertical: 14, alignItems: "center" },
   aiButtonText: { color: "#fff", fontWeight: "600", fontSize: 14 },
+  offlineBanner: { backgroundColor: "#e65100", paddingVertical: 8, paddingHorizontal: 16 },
+  offlineBannerText: { color: "#fff", fontSize: 12, textAlign: "center" },
+  pendingLabel: { color: "#e65100", fontSize: 11, fontWeight: "400" },
 });

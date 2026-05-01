@@ -12,6 +12,8 @@ import {
   Platform,
 } from "react-native";
 import { createTransaction } from "../api/transactions";
+import { addToPendingQueue } from "../services/offlineStorage";
+import { useNetwork } from "../context/NetworkContext";
 import DateInput from "../components/DateInput";
 
 const CATEGORIES = ["Food", "Transport", "Shopping", "Health", "Entertainment", "Bills", "Salary", "Freelance", "Other"];
@@ -24,6 +26,7 @@ export default function AddTransactionScreen({ navigation }) {
   const [dateStr, setDateStr] = useState(new Date().toISOString().split("T")[0]);
   const [category, setCategory] = useState("Other");
   const [saving, setSaving] = useState(false);
+  const { reportOnline, reportOffline } = useNetwork();
 
   const handleSave = async () => {
     const parsedAmount = parseFloat(amount);
@@ -32,20 +35,32 @@ export default function AddTransactionScreen({ navigation }) {
       return;
     }
     setSaving(true);
+    const txData = {
+      type,
+      amount: parsedAmount,
+      merchant: merchant || null,
+      description: description || null,
+      date: dateStr || null,
+      category,
+    };
     try {
-      await createTransaction({
-        type,
-        amount: parsedAmount,
-        merchant: merchant || null,
-        description: description || null,
-        date: dateStr || null,
-        category,
-      });
+      await createTransaction(txData);
+      reportOnline();
       Alert.alert("Saved!", "Transaction recorded.", [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
-    } catch {
-      Alert.alert("Error", "Could not save transaction.");
+    } catch (e) {
+      if (!e.response) {
+        reportOffline();
+        await addToPendingQueue(txData);
+        Alert.alert(
+          "Saved Locally",
+          "You're offline. This transaction will sync automatically when you reconnect.",
+          [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
+      } else {
+        Alert.alert("Error", "Could not save transaction.");
+      }
     } finally {
       setSaving(false);
     }
