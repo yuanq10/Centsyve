@@ -239,11 +239,11 @@ export default function HomeScreen({ navigation }) {
           <Text style={[styles.actionButtonText, { color: "#2e7d32" }]}>＋  Add Transaction</Text>
         </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.aiButton} onPress={() => navigation.navigate("AIAdvisor")}>
-        <Text style={styles.aiButtonText}>🤖  AI Financial Advisor</Text>
-      </TouchableOpacity>
-      <TouchableOpacity style={[styles.aiButton, { backgroundColor: "#1b5e20", marginTop: 8 }]} onPress={() => navigation.navigate("Goals")}>
+      <TouchableOpacity style={[styles.aiButton, { backgroundColor: "#1b5e20" }]} onPress={() => navigation.navigate("Goals")}>
         <Text style={styles.aiButtonText}>🎯  My Goals</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[styles.aiButton, { marginTop: 8 }]} onPress={() => navigation.navigate("AIAdvisor")}>
+        <Text style={styles.aiButtonText}>🤖  AI Financial Advisor</Text>
       </TouchableOpacity>
 
       <View style={{ height: 32 }} />

@@ -132,6 +132,7 @@ export default function GoalsScreen() {
     const amount = parseFloat(newAmount);
     if (isNaN(amount) || amount <= 0) { Alert.alert("Error", "Please enter a valid target amount."); return; }
     if (!newDate.match(/^\d{4}-\d{2}-\d{2}$/)) { Alert.alert("Error", "Please enter a date in YYYY-MM-DD format."); return; }
+    if (new Date(newDate) <= new Date()) { Alert.alert("Error", "Target date must be in the future."); return; }
 
     setCreating(true);
     try {

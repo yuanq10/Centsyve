@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from datetime import date as Date
+from pydantic import BaseModel, field_validator
+from datetime import date as Date, date
 from typing import Optional
 
 
@@ -8,6 +8,13 @@ class GoalCreate(BaseModel):
     target_amount: float
     target_date: Date
     notes: Optional[str] = None
+
+    @field_validator("target_date")
+    @classmethod
+    def must_be_future(cls, v):
+        if v <= date.today():
+            raise ValueError("Target date must be in the future.")
+        return v
 
 
 class GoalOut(BaseModel):
