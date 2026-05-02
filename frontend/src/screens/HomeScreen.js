@@ -209,7 +209,12 @@ export default function HomeScreen({ navigation }) {
 
       {/* Recent Transactions */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Transactions")}>
+            <Text style={styles.sectionLink}>Manage</Text>
+          </TouchableOpacity>
+        </View>
         {recentTx.length === 0 ? (
           <Text style={styles.emptyText}>No transactions yet</Text>
         ) : (
@@ -275,7 +280,9 @@ const styles = StyleSheet.create({
   emptyChart: { marginHorizontal: 16, marginTop: 16, backgroundColor: "#fff", borderRadius: 12, padding: 32, alignItems: "center" },
   emptyText: { color: "#aaa", fontSize: 14 },
   section: { marginHorizontal: 16, marginTop: 20, backgroundColor: "#fff", borderRadius: 12, padding: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#222", marginBottom: 12 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#222" },
+  sectionLink: { fontSize: 13, color: "#2e7d32", fontWeight: "600" },
   txRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
   txMerchant: { fontSize: 14, fontWeight: "600", color: "#222" },
   txDate: { fontSize: 12, color: "#aaa", marginTop: 2 },

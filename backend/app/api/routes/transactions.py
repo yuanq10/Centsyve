@@ -48,3 +48,35 @@ def list_transactions(
     current_user: User = Depends(get_current_user),
 ):
     return db.query(Transaction).filter(Transaction.user_id == current_user.id).order_by(Transaction.date.desc()).all()
+
+
+@router.put("/{tx_id}", response_model=TransactionOut)
+def update_transaction(
+    tx_id: int,
+    payload: TransactionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    tx = db.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == current_user.id).first()
+    if not tx:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    if payload.type not in ("income", "expense"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="type must be 'income' or 'expense'")
+    for key, value in payload.model_dump().items():
+        setattr(tx, key, value)
+    db.commit()
+    db.refresh(tx)
+    return tx
+
+
+@router.delete("/{tx_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_transaction(
+    tx_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    tx = db.query(Transaction).filter(Transaction.id == tx_id, Transaction.user_id == current_user.id).first()
+    if not tx:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    db.delete(tx)
+    db.commit()

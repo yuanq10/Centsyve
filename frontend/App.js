@@ -11,6 +11,7 @@ import ScanReceiptScreen from "./src/screens/ScanReceiptScreen";
 import AddTransactionScreen from "./src/screens/AddTransactionScreen";
 import AIAdvisorScreen from "./src/screens/AIAdvisorScreen";
 import GoalsScreen from "./src/screens/GoalsScreen";
+import TransactionsScreen from "./src/screens/TransactionsScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -34,6 +35,7 @@ function AppNavigator() {
           <Stack.Screen name="AddTransaction" component={AddTransactionScreen} options={{ headerShown: true, title: "Add Transaction" }} />
           <Stack.Screen name="AIAdvisor" component={AIAdvisorScreen} options={{ headerShown: true, title: "AI Advisor" }} />
           <Stack.Screen name="Goals" component={GoalsScreen} options={{ headerShown: true, title: "My Goals" }} />
+          <Stack.Screen name="Transactions" component={TransactionsScreen} options={{ headerShown: true, title: "Transactions" }} />
         </>
       ) : (
         <>

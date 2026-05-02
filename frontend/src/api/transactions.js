@@ -20,3 +20,7 @@ export const listTransactions = async () => {
   await cacheTransactions(res.data);
   return res;
 };
+
+export const updateTransaction = (id, data) => client.put(`/transactions/${id}`, data);
+
+export const deleteTransaction = (id) => client.delete(`/transactions/${id}`);

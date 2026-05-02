@@ -12,20 +12,23 @@ import {
   Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { createTransaction, scanReceipt } from "../api/transactions";
+import { createTransaction, updateTransaction, scanReceipt } from "../api/transactions";
 import { addToPendingQueue } from "../services/offlineStorage";
 import { useNetwork } from "../context/NetworkContext";
 import DateInput from "../components/DateInput";
 
 const CATEGORIES = ["Food", "Transport", "Shopping", "Health", "Entertainment", "Bills", "Salary", "Freelance", "Other"];
 
-export default function AddTransactionScreen({ navigation }) {
-  const [type, setType] = useState("expense");
-  const [amount, setAmount] = useState("");
-  const [merchant, setMerchant] = useState("");
-  const [description, setDescription] = useState("");
-  const [dateStr, setDateStr] = useState(new Date().toISOString().split("T")[0]);
-  const [category, setCategory] = useState("Other");
+export default function AddTransactionScreen({ navigation, route }) {
+  const existing = route.params?.transaction ?? null;
+  const isEdit = existing !== null;
+
+  const [type, setType] = useState(existing?.type ?? "expense");
+  const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
+  const [merchant, setMerchant] = useState(existing?.merchant ?? "");
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [dateStr, setDateStr] = useState(existing?.date ?? new Date().toISOString().split("T")[0]);
+  const [category, setCategory] = useState(existing?.category ?? "Other");
   const [saving, setSaving] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanNote, setScanNote] = useState("");
@@ -106,9 +109,13 @@ export default function AddTransactionScreen({ navigation }) {
       category,
     };
     try {
-      await createTransaction(txData);
+      if (isEdit) {
+        await updateTransaction(existing.id, txData);
+      } else {
+        await createTransaction(txData);
+      }
       reportOnline();
-      Alert.alert("Saved!", "Transaction recorded.", [
+      Alert.alert("Saved!", isEdit ? "Transaction updated." : "Transaction recorded.", [
         { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (e) {
@@ -134,33 +141,35 @@ export default function AddTransactionScreen({ navigation }) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.title}>Add Transaction</Text>
+        <Text style={styles.title}>{isEdit ? "Edit Transaction" : "Add Transaction"}</Text>
 
-        {/* Receipt auto-fill card */}
-        <View style={styles.scanCard}>
-          <Text style={styles.scanCardTitle}>Auto-fill from Receipt</Text>
-          <Text style={styles.scanCardSub}>Take a photo or upload an image of any receipt</Text>
-          {scanning ? (
-            <View style={styles.scanningRow}>
-              <ActivityIndicator color="#2e7d32" />
-              <Text style={styles.scanningText}>Scanning receipt…</Text>
-            </View>
-          ) : (
-            <View style={styles.scanButtons}>
-              <TouchableOpacity style={styles.scanBtn} onPress={pickFromCamera}>
-                <Text style={styles.scanBtnText}>📷  Camera</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.scanBtn} onPress={pickFromGallery}>
-                <Text style={styles.scanBtnText}>🖼️  Upload</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          {scanNote !== "" && (
-            <Text style={[styles.scanNote, scanNote.startsWith("Auto-filled") && styles.scanNoteSuccess]}>
-              {scanNote}
-            </Text>
-          )}
-        </View>
+        {/* Receipt auto-fill card — only shown when creating */}
+        {!isEdit && (
+          <View style={styles.scanCard}>
+            <Text style={styles.scanCardTitle}>Auto-fill from Receipt</Text>
+            <Text style={styles.scanCardSub}>Take a photo or upload an image of any receipt</Text>
+            {scanning ? (
+              <View style={styles.scanningRow}>
+                <ActivityIndicator color="#2e7d32" />
+                <Text style={styles.scanningText}>Scanning receipt…</Text>
+              </View>
+            ) : (
+              <View style={styles.scanButtons}>
+                <TouchableOpacity style={styles.scanBtn} onPress={pickFromCamera}>
+                  <Text style={styles.scanBtnText}>📷  Camera</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.scanBtn} onPress={pickFromGallery}>
+                  <Text style={styles.scanBtnText}>🖼️  Upload</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {scanNote !== "" && (
+              <Text style={[styles.scanNote, scanNote.startsWith("Auto-filled") && styles.scanNoteSuccess]}>
+                {scanNote}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Type Toggle */}
         <View style={styles.typeRow}>
