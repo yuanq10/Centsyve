@@ -1,7 +1,7 @@
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE_URL = "REPLACE_WITH_RAILWAY_URL"; // e.g. https://centsyve-api.railway.app
+const API_BASE_URL = "https://centsyve-production.up.railway.app";
 
 const client = axios.create({ baseURL: API_BASE_URL });
 

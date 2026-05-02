@@ -1,0 +1,434 @@
+================================================================================
+CENTSYVE — TECHNICAL DETAILS
+================================================================================
+Mobile expense tracking application with receipt scanning, AI financial advice,
+and offline support.
+
+
+================================================================================
+TECHNOLOGY STACK
+================================================================================
+
+FRONTEND
+--------
+- React Native (Expo SDK 54)
+    Cross-platform mobile framework. Write once, run on iOS and Android.
+    Expo is a toolchain on top of React Native that simplifies builds,
+    camera access, and device APIs without needing Xcode or Android Studio
+    for development testing.
+
+- Expo Go
+    A free app installed on the user's phone that runs the development
+    build by scanning a QR code. No app store submission required for testing.
+
+- React Navigation (native-stack)
+    Handles screen transitions and the navigation stack (e.g. Home →
+    ScanReceipt → back to Home).
+
+- Axios
+    HTTP client for making API requests to the backend. Automatically
+    attaches the JWT token to every request via an interceptor.
+
+- AsyncStorage (@react-native-async-storage/async-storage)
+    Persistent key-value storage on the device. Used to store the JWT
+    auth token so users stay logged in across app restarts, and to cache
+    transaction data for offline use.
+
+- react-native-chart-kit + react-native-svg
+    Renders the income/expense line charts on the dashboard.
+
+- expo-image-picker
+    Provides access to the device camera and photo gallery for receipt
+    scanning.
+
+BACKEND
+-------
+- Python 3.11
+    Pinned to 3.11 for compatibility with all dependencies on Railway.
+
+- FastAPI
+    Modern, async-capable Python web framework. Handles routing, request
+    validation, and dependency injection. Auto-generates API documentation
+    at /docs.
+
+- SQLAlchemy 2.0
+    ORM (Object Relational Mapper) — lets us define database tables as
+    Python classes and write queries in Python instead of raw SQL.
+
+- PostgreSQL (production) / SQLite (testing)
+    PostgreSQL is the production database hosted on Railway. SQLite is
+    used only during automated testing — it requires no server and is
+    reset between every test.
+
+- Alembic
+    Database migration tool for SQLAlchemy. Tracks and applies schema
+    changes over time. (Installed and ready for future use.)
+
+- Pydantic v2 + pydantic-settings
+    Data validation library. Every API request and response is validated
+    against a schema. pydantic-settings loads configuration from
+    environment variables.
+
+- python-jose + passlib[bcrypt]
+    JWT creation/validation (python-jose) and password hashing (passlib
+    with bcrypt algorithm). Passwords are never stored in plain text.
+
+- Google Cloud Vision API
+    OCR (Optical Character Recognition) service. Sends receipt image
+    bytes to Google's servers and receives the extracted text back.
+
+- Anthropic Claude API (claude-haiku-4-5-20251001)
+    Powers the AI Financial Advisor feature — spending insights, budget
+    recommendations, and the freeform chat assistant.
+
+HOSTING
+-------
+- Railway
+    Cloud platform that hosts both the FastAPI backend and the managed
+    PostgreSQL database. Deploys automatically from the GitHub repository.
+
+
+================================================================================
+BACKEND FILE DETAILS
+================================================================================
+
+main.py
+    Entry point for the FastAPI application. Registers all four route
+    groups (auth, transactions, dashboard, AI), enables CORS so the
+    mobile app can call the API, and creates database tables on startup.
+    Also exposes a /health endpoint used to verify the deployment is live.
+
+Procfile
+    One-line file Railway reads to know how to start the server:
+    "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    $PORT is injected by Railway at runtime.
+
+.python-version
+    Tells Railway's build system to use Python 3.11. Without this,
+    Railway defaults to Python 3.13, which breaks psycopg2-binary.
+
+requirements.txt
+    All production Python dependencies with pinned versions.
+    Notable pins:
+      bcrypt==3.2.2       — passlib 1.7.4 breaks with bcrypt >= 4.0
+      pydantic[email]     — the [email] extra installs email-validator,
+                            required for the EmailStr field type
+
+requirements-dev.txt
+    Additional packages only needed for running tests (pytest, httpx, etc.)
+
+.env  (not committed to git)
+    Local environment variables: DATABASE_URL, SECRET_KEY, ANTHROPIC_API_KEY,
+    GOOGLE_APPLICATION_CREDENTIALS. On Railway these are set as environment
+    variables in the dashboard instead.
+
+google_credentials.json  (not committed to git)
+    Service account key file downloaded from Google Cloud Console.
+    Used locally for OCR. On Railway, the JSON content is pasted as the
+    GOOGLE_CREDENTIALS_JSON environment variable instead.
+
+-------- app/core/ --------
+
+app/core/config.py
+    Loads all environment variables into a typed Settings object using
+    pydantic-settings. Any file that needs a config value imports
+    `settings` from here.
+
+app/core/security.py
+    Two functions: hash_password() hashes a plain-text password using
+    bcrypt. verify_password() checks a plain-text password against a
+    stored hash. create_access_token() builds a signed JWT.
+    decode_access_token() verifies and decodes a JWT.
+
+-------- app/db/ --------
+
+app/db/session.py
+    Creates the SQLAlchemy engine (database connection), the SessionLocal
+    factory for creating sessions, and the Base class that all models
+    inherit from. Also defines get_db(), the FastAPI dependency that
+    opens a database session per request and closes it when done.
+    Includes a fix that rewrites Railway's "postgres://" URL prefix to
+    "postgresql://" which SQLAlchemy 2.0 requires.
+
+-------- app/models/ --------
+
+app/models/user.py
+    SQLAlchemy model for the "users" table.
+    Columns: id, email (unique), password_hash, created_at.
+
+app/models/transaction.py
+    SQLAlchemy model for the "transactions" table.
+    Columns: id, user_id (foreign key to users), type (income/expense),
+    amount, category, date, merchant, description, created_at.
+
+-------- app/schemas/ --------
+
+app/schemas/user.py
+    Pydantic schemas for user-related API requests and responses.
+    UserRegister: email + password (input).
+    UserOut: id + email (output — never exposes password_hash).
+    TokenOut: access_token + token_type (login response).
+
+app/schemas/transaction.py
+    Pydantic schemas for transaction requests and responses.
+    TransactionCreate: fields a user submits when adding a transaction.
+    TransactionOut: what the API returns (includes id, excludes internals).
+    ReceiptScanOut: what the scan endpoint returns — amount, date,
+    merchant, suggested_category, line items, confidence score, warnings.
+    Note: uses "from datetime import date as Date" to avoid a Pydantic v2
+    bug where a field named "date" shadows the date type in annotations.
+
+app/schemas/ai.py
+    Pydantic schemas for AI endpoint requests (chat message input).
+
+-------- app/api/routes/ --------
+
+app/api/routes/auth.py
+    POST /auth/register — creates a new user account.
+    POST /auth/login    — validates credentials, returns a JWT token.
+    GET  /auth/me       — returns the current user's profile.
+    Also defines get_current_user(), a reusable FastAPI dependency that
+    extracts and validates the Bearer token from any request header.
+
+app/api/routes/transactions.py
+    POST /transactions/      — saves a new income or expense transaction.
+    GET  /transactions/      — lists all transactions for the current user.
+    POST /transactions/scan  — accepts an uploaded image, runs OCR,
+                               parses the text, and returns extracted data.
+                               Returns 400 for non-image files, 503 if
+                               Google Vision credentials are missing.
+
+app/api/routes/dashboard.py
+    GET /dashboard/summary         — totals: income, expenses, balance.
+    GET /dashboard/trends?period=  — grouped data for the line chart.
+                                     period can be weekly, monthly, yearly.
+
+app/api/routes/ai.py
+    GET  /ai/insights — calls Claude to analyse the user's transactions
+                        and return spending insights + budget recommendations.
+    POST /ai/chat     — single-turn chat with the AI financial advisor.
+                        Sends the user's message and recent transactions
+                        as context.
+
+-------- app/services/ --------
+
+app/services/ocr.py
+    Wraps the Google Cloud Vision API. Accepts raw image bytes, sends
+    them to Vision's text_detection endpoint, and returns the full
+    extracted text string. Supports two credential modes: a JSON string
+    environment variable (production/Railway) or a local file path (dev).
+
+app/services/parser.py
+    Pure Python receipt parser — no ML, no external calls.
+    _parse_amount()  — looks for total-keyword lines first (TOTAL, GRAND
+                       TOTAL, AMOUNT DUE, etc.), falls back to the largest
+                       dollar value, then the largest plain decimal.
+    _parse_date()    — tries 5 regex patterns covering ISO, US, EU, and
+                       written month formats. Rejects future dates and
+                       dates older than 10 years.
+    _parse_merchant() — takes the first meaningful non-numeric,
+                        non-address line at the top of the receipt.
+    _parse_items()   — extracts line items that match the pattern
+                       "description ... price".
+    parse_receipt()  — calls all four parsers, calls auto_categorize(),
+                       computes a 0-1 confidence score, and returns a
+                       single result dict.
+
+app/services/categorizer.py
+    Keyword-based transaction categorizer. Checks the merchant name and
+    raw OCR text against 80+ keywords across 8 categories: Food,
+    Transport, Shopping, Health, Entertainment, Bills, Salary, Freelance.
+    Returns "Other" if nothing matches.
+
+app/services/validation.py
+    Post-parse validation. Checks the parsed receipt for problems:
+    missing or zero amount, future or very old date, missing merchant,
+    invalid transaction type. Returns a list of warning strings that
+    are passed back to the frontend so the user knows what to verify.
+
+app/services/ai.py
+    Wrapper around the Anthropic Claude API.
+    get_spending_insights() — sends transaction history to Claude and
+                              asks for a spending breakdown analysis.
+    get_budget_recommendations() — asks Claude for budget advice based
+                                   on the user's spending patterns.
+    chat() — freeform conversation with Claude, with recent transactions
+             injected as context so the AI can give relevant advice.
+    All calls use the claude-haiku-4-5-20251001 model for speed and cost.
+
+-------- tests/ --------
+
+tests/conftest.py
+    Shared pytest fixtures. Creates a SQLite test database once per
+    session, then deletes all rows before every individual test for full
+    isolation. Provides: db (session), client (TestClient with auth
+    override), test_user, auth_headers, sample_transactions.
+
+tests/test_parser.py         — 30+ unit tests for all parser functions.
+tests/test_categorizer.py    — 18 tests for auto-categorization.
+tests/test_validation.py     — 15+ tests for receipt validation logic.
+tests/test_security.py       — 9 tests for JWT creation/decode and
+                               password hashing/verification.
+tests/test_auth_routes.py    — 10 integration tests for register, login,
+                               and /me endpoints.
+tests/test_transaction_routes.py — 12 integration tests for create,
+                               list, and scan endpoints. OCR is mocked
+                               so tests run without Google credentials.
+
+Total: 102 tests, all passing.
+
+
+================================================================================
+FRONTEND FILE DETAILS
+================================================================================
+
+index.js
+    Expo entry point. Just registers App as the root component.
+
+App.js
+    Root of the component tree. Wraps everything in three providers:
+    NetworkProvider (offline detection), AuthProvider (login state),
+    and NavigationContainer (screen routing). Defines the navigation
+    stack — unauthenticated users see Login/Register, authenticated
+    users see Home/ScanReceipt/AddTransaction/AIAdvisor.
+
+app.json
+    Expo configuration: app name, version, icon, splash screen,
+    orientation (portrait only), and platform-specific settings.
+
+-------- src/api/ --------
+
+src/api/client.js
+    Creates the shared Axios instance pointed at the Railway backend URL.
+    An interceptor runs before every request and attaches the stored JWT
+    token as an Authorization: Bearer header.
+
+src/api/auth.js
+    Three functions that call the auth endpoints:
+    register(), login(), getMe().
+
+src/api/transactions.js
+    scanReceipt() — uploads an image as multipart form data.
+    createTransaction() — posts a new transaction.
+    listTransactions() — fetches all transactions and saves the result
+                         to AsyncStorage as an offline cache.
+
+src/api/dashboard.js
+    getSummary() — fetches income/expense totals.
+    getTrends()  — fetches grouped chart data for a given period.
+
+src/api/ai.js
+    getInsights()     — fetches AI spending analysis.
+    sendChatMessage() — sends a message to the AI chat endpoint.
+
+-------- src/context/ --------
+
+src/context/AuthContext.js
+    Manages authentication state for the whole app. On startup, reads
+    the stored token and calls /auth/me to restore the session. Provides
+    login(), register(), logout() functions and the current user object
+    to any screen via the useAuth() hook.
+
+src/context/NetworkContext.js
+    Tracks whether the device currently has a working server connection.
+    Provides isOnline (boolean), reportOnline(), and reportOffline() to
+    any screen via the useNetwork() hook. State is updated by screens
+    when API calls succeed or fail with network errors.
+
+-------- src/services/ --------
+
+src/services/offlineStorage.js
+    All offline data logic in one place.
+    cacheTransactions()   — saves the latest server transaction list to
+                            AsyncStorage after every successful fetch.
+    getCachedTransactions() — reads that cache for offline display.
+    addToPendingQueue()   — when a transaction is created offline, stores
+                            it in a pending queue AND adds it to the cache
+                            so it appears in the UI immediately.
+    getPendingQueue()     — returns all transactions waiting to sync.
+    clearPendingQueue()   — called after a successful sync.
+    computeSummary()      — pure JavaScript: totals income and expenses
+                            from a transaction array to calculate the
+                            balance. No network needed.
+
+-------- src/components/ --------
+
+src/components/DateInput.js
+    A TextInput that auto-formats typed characters into YYYY-MM-DD as
+    the user types. Strips non-digits and inserts dashes at positions 5
+    and 8 automatically.
+
+-------- src/screens/ --------
+
+src/screens/LoginScreen.js
+    Email + password form. Calls login() from AuthContext. On success,
+    AuthContext updates the user state and App.js automatically switches
+    the navigation stack to the authenticated screens.
+
+src/screens/RegisterScreen.js
+    Same layout as LoginScreen but calls register(). After registration,
+    auto-logs in.
+
+src/screens/HomeScreen.js
+    Main dashboard. Shows balance, income, and expense summary cards,
+    a period-selector (weekly/monthly/yearly), a line chart of trends,
+    and the 5 most recent transactions. Three action buttons: Scan
+    Receipt (one-tap camera), Add Income, AI Financial Advisor.
+    Offline behaviour: on network error, falls back to cached
+    transactions, computes summary locally, hides the chart, and shows
+    an orange offline banner. On next successful load, automatically
+    syncs any pending offline transactions to the server first.
+
+src/screens/AddTransactionScreen.js
+    Manual transaction entry form. Fields: type toggle (income/expense),
+    amount, date, merchant, description, category chips. Online: posts
+    to the API and navigates back. Offline: saves to the pending queue
+    in AsyncStorage and shows a "Saved Locally" confirmation — the
+    transaction will sync automatically when connectivity is restored.
+
+src/screens/ScanReceiptScreen.js
+    Receipt scanning flow. Accepts an image from the camera or gallery
+    (or a pre-captured image passed from HomeScreen's one-tap button).
+    Uploads the image to /transactions/scan, displays the extracted
+    amount, date, merchant, confidence score, and any warnings. The user
+    can correct any field before saving. Auto-selects the suggested
+    category returned by the backend parser.
+
+src/screens/AIAdvisorScreen.js
+    Two-tab screen. Insights tab: a button triggers a call to /ai/insights
+    and displays spending analysis and budget recommendation cards.
+    Chat tab: a message input with suggested quick-questions and a
+    scrollable bubble-style conversation with the AI advisor.
+
+
+================================================================================
+DATA FLOW SUMMARY
+================================================================================
+
+Receipt scan:
+  Phone camera → expo-image-picker → multipart upload to FastAPI
+  → Google Vision API (OCR) → parser.py (regex extraction)
+  → categorizer.py (keyword match) → validation.py (warnings)
+  → JSON response → ScanReceiptScreen (user reviews) → save transaction
+
+Manual entry:
+  AddTransactionScreen form → POST /transactions/ → PostgreSQL
+  (if offline: AsyncStorage pending queue → sync on next connection)
+
+Dashboard:
+  HomeScreen → GET /dashboard/summary + /dashboard/trends
+  → summary cards + LineChart
+  (if offline: AsyncStorage cache → computeSummary() local math)
+
+AI advice:
+  AIAdvisorScreen → GET /ai/insights or POST /ai/chat
+  → app/services/ai.py → Anthropic Claude API → response cards / chat bubble
+
+Auth:
+  Register/Login form → POST /auth/register or /auth/login
+  → JWT token → AsyncStorage → attached to all subsequent requests
+  via Axios interceptor → get_current_user() dependency validates it
+  on every protected endpoint
+
+
+================================================================================
