@@ -151,14 +151,16 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
       <View style={styles.cardRow}>
-        <View style={[styles.card, styles.incomeCard]}>
+        <TouchableOpacity style={[styles.card, styles.incomeCard]} onPress={() => navigation.navigate("Transactions", { filter: "Income" })} activeOpacity={0.8}>
           <Text style={styles.cardLabel}>Income</Text>
           <Text style={[styles.cardValue, { color: "#2e7d32" }]}>${summary?.total_income?.toFixed(2) ?? "0.00"}</Text>
-        </View>
-        <View style={[styles.card, styles.expenseCard]}>
+          <Text style={styles.cardManageLink}>Manage →</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.card, styles.expenseCard]} onPress={() => navigation.navigate("Transactions", { filter: "Expense" })} activeOpacity={0.8}>
           <Text style={styles.cardLabel}>Expenses</Text>
           <Text style={[styles.cardValue, { color: "#c62828" }]}>${summary?.total_expenses?.toFixed(2) ?? "0.00"}</Text>
-        </View>
+          <Text style={styles.cardManageLink}>Manage →</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Period Selector */}
@@ -270,6 +272,7 @@ const styles = StyleSheet.create({
   expenseCard: {},
   cardLabel: { fontSize: 12, color: "#888", marginBottom: 4 },
   cardValue: { fontSize: 20, fontWeight: "700" },
+  cardManageLink: { fontSize: 11, color: "#888", marginTop: 6 },
   cardValueLarge: { fontSize: 32, fontWeight: "700", color: "#222" },
   periodRow: { flexDirection: "row", gap: 8, marginHorizontal: 16, marginTop: 20 },
   periodChip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, backgroundColor: "#fff", borderWidth: 1, borderColor: "#ddd" },

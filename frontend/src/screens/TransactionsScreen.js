@@ -7,11 +7,15 @@ import { useFocusEffect } from "@react-navigation/native";
 import { listTransactions, deleteTransaction } from "../api/transactions";
 import { cacheTransactions } from "../services/offlineStorage";
 
-export default function TransactionsScreen({ navigation }) {
+const FILTERS = ["All", "Income", "Expense"];
+
+export default function TransactionsScreen({ navigation, route }) {
+  const initialFilter = route.params?.filter ?? "All";
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [filter, setFilter] = useState(initialFilter);
 
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
@@ -54,6 +58,12 @@ export default function TransactionsScreen({ navigation }) {
   const handleEdit = (tx) => {
     navigation.navigate("AddTransaction", { transaction: tx });
   };
+
+  const filtered = transactions.filter((tx) => {
+    if (filter === "Income") return tx.type === "income";
+    if (filter === "Expense") return tx.type === "expense";
+    return true;
+  });
 
   const renderItem = ({ item: tx }) => {
     const expanded = expandedId === tx.id;
@@ -103,23 +113,42 @@ export default function TransactionsScreen({ navigation }) {
   }
 
   return (
-    <FlatList
-      data={transactions}
-      keyExtractor={(tx) => String(tx.id)}
-      renderItem={renderItem}
-      contentContainerStyle={styles.list}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
-      ListEmptyComponent={
-        <View style={styles.centered}>
-          <Text style={styles.emptyText}>No transactions yet</Text>
-        </View>
-      }
-    />
+    <View style={{ flex: 1, backgroundColor: "#f5f5f5" }}>
+      <View style={styles.filterRow}>
+        {FILTERS.map((f) => (
+          <TouchableOpacity
+            key={f}
+            style={[styles.filterChip, filter === f && styles.filterChipActive]}
+            onPress={() => { setFilter(f); setExpandedId(null); }}
+          >
+            <Text style={[styles.filterText, filter === f && styles.filterTextActive]}>{f}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <FlatList
+        data={filtered}
+        keyExtractor={(tx) => String(tx.id)}
+        renderItem={renderItem}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}
+        ListEmptyComponent={
+          <View style={styles.centered}>
+            <Text style={styles.emptyText}>No transactions yet</Text>
+          </View>
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  list: { padding: 16, flexGrow: 1, backgroundColor: "#f5f5f5" },
+  filterRow: { flexDirection: "row", gap: 8, padding: 12, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#f0f0f0" },
+  filterChip: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: "#ddd", backgroundColor: "#fff" },
+  filterChipActive: { backgroundColor: "#2e7d32", borderColor: "#2e7d32" },
+  filterText: { fontSize: 13, color: "#555" },
+  filterTextActive: { color: "#fff", fontWeight: "600" },
+
+  list: { padding: 12, flexGrow: 1 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40 },
   emptyText: { color: "#aaa", fontSize: 15 },
 
