@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.session import Base, engine
-from app.api.routes import auth, transactions, dashboard, ai
+from app.api.routes import auth, transactions, dashboard, ai, goals
 import app.models.user        # ensure models are registered before create_all
 import app.models.transaction
+import app.models.goal
 
 Base.metadata.create_all(bind=engine)
 
@@ -21,6 +22,7 @@ app.include_router(auth.router)
 app.include_router(transactions.router)
 app.include_router(dashboard.router)
 app.include_router(ai.router)
+app.include_router(goals.router)
 
 
 @app.get("/health")

@@ -126,3 +126,40 @@ User question: {user_message}"""
     except APIError as e:
         raise RuntimeError(f"Anthropic API error: {e.message}")
     return message.content[0].text
+
+
+def get_goal_advice(goal_name: str, target_amount: float, months_remaining: float,
+                    monthly_gap: float, category_spending: dict) -> str:
+    client = _get_client()
+    spending_lines = "\n".join(
+        f"- {cat}: ${amt:.2f}/month"
+        for cat, amt in sorted(category_spending.items(), key=lambda x: x[1], reverse=True)
+    ) or "No expense data available yet."
+
+    prompt = f"""The user has set a financial goal:
+Goal: {goal_name}
+Target amount: ${target_amount:.2f}
+Time remaining: {months_remaining:.1f} months
+Extra savings needed per month: ${monthly_gap:.2f}
+
+Current monthly spending by category:
+{spending_lines}
+
+Provide specific, actionable advice to help them reach this goal. Include:
+1. The most impactful spending areas to reduce based on their data
+2. A realistic monthly savings plan
+3. 2-3 creative ways to reduce spending or increase income
+4. An encouraging closing message
+
+Keep it under 250 words and make it specific to their actual numbers."""
+
+    try:
+        message = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=500,
+            system=_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except APIError as e:
+        raise RuntimeError(f"Anthropic API error: {e.message}")
+    return message.content[0].text

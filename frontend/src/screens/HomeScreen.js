@@ -242,6 +242,9 @@ export default function HomeScreen({ navigation }) {
       <TouchableOpacity style={styles.aiButton} onPress={() => navigation.navigate("AIAdvisor")}>
         <Text style={styles.aiButtonText}>🤖  AI Financial Advisor</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={[styles.aiButton, { backgroundColor: "#1b5e20", marginTop: 8 }]} onPress={() => navigation.navigate("Goals")}>
+        <Text style={styles.aiButtonText}>🎯  My Goals</Text>
+      </TouchableOpacity>
 
       <View style={{ height: 32 }} />
     </ScrollView>

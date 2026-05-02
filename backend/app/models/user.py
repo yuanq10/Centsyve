@@ -12,3 +12,4 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     transactions = relationship("Transaction", back_populates="user", cascade="all, delete")
+    goals = relationship("Goal", back_populates="user", cascade="all, delete")
