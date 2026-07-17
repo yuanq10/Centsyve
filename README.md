@@ -14,7 +14,7 @@ A fully offline personal expense tracking mobile app built with React Native and
 
 ## Download
 
-[Download APK](#) ← replace with actual link once built
+[Download APK](https://expo.dev/artifacts/eas/DFY5akWhIK_ItJy88zPZzK5b7VQFbtTaVh9u9ru70LI.apk) 
 
 ## Tech Stack
 
