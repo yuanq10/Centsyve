@@ -31,9 +31,11 @@ A fully offline personal expense tracking mobile app built with React Native and
 - expo-document-picker
 - EAS Build
 
-## Building
+## Installation
 
-```bash
-npm install
-eas build -p android --profile preview
-```
+Currently supported on **Android only** (iOS does not support sideloaded `.apk` files).
+
+1. Download the APK from the link above
+2. Transfer it to your Android phone (or open it directly if downloading on the phone)
+3. On your phone go to Settings → Security → enable **Install from unknown sources**
+4. Open the APK file and tap Install
