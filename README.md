@@ -1,5 +1,7 @@
 # Centsyve
 
+**English** | [中文](README.zh.md)
+
 A fully offline personal expense tracking mobile app built with React Native and Expo. Designed to replicate the simplicity of an Excel expense spreadsheet with a clean mobile experience — log transactions, track recurring bills, view monthly summaries, and analyze spending trends.
 
 ## Features
