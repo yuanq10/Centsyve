@@ -24,14 +24,6 @@
 - TypeScript
 - expo-sqlite v16
 - Zustand v5
-- react-native-gifted-charts
-- @react-navigation/native + @react-navigation/bottom-tabs
-- @react-native-community/datetimepicker
-- i18n-js + expo-localization
-- expo-file-system
-- expo-sharing
-- expo-document-picker
-- EAS Build
 
 ## 安装
 
