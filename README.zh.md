@@ -11,12 +11,12 @@
 - **趋势** — 支出折线图，支持 1周 / 本月 / 1年 / 今年 时间范围及按分类筛选，并与上期对比。
 - **固定支出** — 设置每月固定账单（房租、手机费等），到期自动记账。
 - **中英双语** — 支持完整的中英文界面，可在设置中切换。
-- **数据导出** — 支持 CSV 导入导出及 JSON 完整备份与恢复。
+- **数据导出** — 支持导出 CSV，导入 CSV 或 Excel（.xlsx）文件。
 - **完全离线** — 无需账号、无需服务器、无需网络，所有数据本地存储。
 
 ## 下载
 
-[下载 APK](https://expo.dev/artifacts/eas/DFY5akWhIK_ItJy88zPZzK5b7VQFbtTaVh9u9ru70LI.apk)
+[下载 APK](https://expo.dev/artifacts/eas/vsWAy4EjGnYAkvqz1cV5JOOR3QOop5In_0s63g20uAg.apk)
 
 ## 技术栈
 

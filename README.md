@@ -11,12 +11,12 @@ A fully offline personal expense tracking mobile app built with React Native and
 - **Trends** — Line graph of spending over time (1W / 1M / 1Y / YTD) with per-category filtering and period-over-period comparison.
 - **Recurring Bills** — Define monthly recurring expenses (rent, phone, etc.) that auto-post on their due date every month.
 - **Bilingual** — Full English and Mandarin Chinese support, switchable in Settings.
-- **Data portability** — Export/import via CSV, full JSON backup and restore.
+- **Data portability** — Export to CSV, import from CSV or Excel (.xlsx).
 - **Fully offline** — No account, no server, no internet required. All data stored locally on device.
 
 ## Download
 
-[Download APK](https://expo.dev/artifacts/eas/DFY5akWhIK_ItJy88zPZzK5b7VQFbtTaVh9u9ru70LI.apk) 
+[Download APK](https://expo.dev/artifacts/eas/vsWAy4EjGnYAkvqz1cV5JOOR3QOop5In_0s63g20uAg.apk)
 
 ## Tech Stack
 
