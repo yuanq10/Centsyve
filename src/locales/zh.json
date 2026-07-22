@@ -102,19 +102,13 @@
     "language": "语言",
     "languageEnglish": "英文",
     "languageChinese": "中文",
+    "dataSection": "导入与导出",
     "exportCsv": "导出 CSV",
-    "importCsv": "导入 CSV",
-    "importHint": "列格式：年、月、日、商家、分类、金额",
-    "backupJson": "备份（JSON）",
-    "restoreJson": "恢复备份（JSON）",
+    "import": "导入文件",
+    "importHint": "CSV 或 Excel（.xlsx）文件 — 列格式：年、月、日、商家、分类、金额",
     "exportSuccess": "导出成功",
     "importSuccess": "已导入 %{count} 笔账单",
-    "importError": "导入失败：%{error}",
-    "backupSuccess": "备份已保存",
-    "restoreSuccess": "恢复成功",
-    "restoreConfirm": "恢复备份？这将替换所有当前数据。",
-    "confirm": "确认",
-    "cancel": "取消"
+    "importError": "导入失败：%{error}"
   },
   "common": {
     "ok": "好",

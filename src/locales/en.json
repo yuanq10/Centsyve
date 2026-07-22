@@ -102,19 +102,13 @@
     "language": "Language",
     "languageEnglish": "English",
     "languageChinese": "Chinese",
+    "dataSection": "Import & Export",
     "exportCsv": "Export CSV",
-    "importCsv": "Import CSV",
-    "importHint": "Columns: Year, Month, Day, Item, Category, Amount",
-    "backupJson": "Backup (JSON)",
-    "restoreJson": "Restore (JSON)",
+    "import": "Import File",
+    "importHint": "CSV or Excel (.xlsx) — Columns: Year, Month, Day, Item, Category, Amount",
     "exportSuccess": "Exported successfully",
     "importSuccess": "Imported %{count} transaction(s)",
-    "importError": "Import failed: %{error}",
-    "backupSuccess": "Backup saved",
-    "restoreSuccess": "Restored successfully",
-    "restoreConfirm": "Restore backup? This will replace all current data.",
-    "confirm": "Confirm",
-    "cancel": "Cancel"
+    "importError": "Import failed: %{error}"
   },
   "common": {
     "ok": "OK",

@@ -10,14 +10,15 @@ import {
 import * as DocumentPicker from 'expo-document-picker';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system/legacy';
-import { getDb, CATEGORY_KEYS, CategoryKey, dollarsToCents } from '../db/database';
-import { getAllTransactions, createTransaction, deleteTransaction } from '../db/transactions';
+import * as XLSX from 'xlsx';
+import { getDb, CategoryKey, dollarsToCents } from '../db/database';
+import { getAllTransactions, createTransaction } from '../db/transactions';
 import { useTransactionStore } from '../store/useTransactionStore';
 import { useLocaleStore } from '../store/useLocaleStore';
 import { t } from '../i18n';
 import { todayISO } from '../utils/formatting';
 
-// Map both English display names and Chinese spreadsheet names → DB keys
+// Map both English and Chinese category names (current + legacy spreadsheet labels) → DB keys
 const CATEGORY_ALIASES: Record<string, CategoryKey> = {
   rent: 'rent', Rent: 'rent', 房租: 'rent',
   utilities: 'utilities', 'Utilities & Internet': 'utilities', 水电网络费: 'utilities', 水电网络: 'utilities',
@@ -32,14 +33,21 @@ function resolveCategory(raw: string): CategoryKey | null {
   return CATEGORY_ALIASES[raw.trim()] ?? null;
 }
 
-function buildCsv(txs: ReturnType<typeof getAllTransactions>): string {
-  const header = 'Year,Month,Day,Item,Category,Amount\n';
+function buildCsv(txs: ReturnType<typeof getAllTransactions>, locale: string): string {
+  const header = locale === 'zh' ? '年,月,日,项目,种类,金额\n' : 'Year,Month,Day,Item,Category,Amount\n';
   const rows = txs.map((tx) => {
     const [y, m, d] = tx.date.split('-');
     const amount = (tx.amount_cents / 100).toFixed(2);
-    return `${y},${m},${d},"${tx.item.replace(/"/g, '""')}",${tx.category},${amount}`;
+    const category = t(`categories.${tx.category}`);
+    return `${y},${m},${d},"${tx.item.replace(/"/g, '""')}",${category},${amount}`;
   });
   return header + rows.join('\n');
+}
+
+/** First row is a header (not data) if its first cell isn't a plausible 4-digit year. */
+function isHeaderRow(cols: unknown[]): boolean {
+  const first = String(cols?.[0] ?? '').trim();
+  return !/^\d{4}$/.test(first);
 }
 
 export default function SettingsScreen() {
@@ -49,7 +57,7 @@ export default function SettingsScreen() {
   async function handleExportCsv() {
     try {
       const txs = getAllTransactions();
-      const csv = buildCsv(txs);
+      const csv = buildCsv(txs, locale);
       const path = FileSystem.cacheDirectory + `centsyve_${todayISO()}.csv`;
       await FileSystem.writeAsStringAsync(path, csv, { encoding: FileSystem.EncodingType.UTF8 });
       if (await Sharing.isAvailableAsync()) {
@@ -61,27 +69,51 @@ export default function SettingsScreen() {
     }
   }
 
-  async function handleImportCsv() {
+  async function handleImport() {
     try {
-      const result = await DocumentPicker.getDocumentAsync({ type: 'text/csv', copyToCacheDirectory: true });
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'text/csv',
+          'text/comma-separated-values',
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ],
+        copyToCacheDirectory: true,
+      });
       if (result.canceled) return;
-      const text = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.UTF8 });
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const dataLines = lines[0].startsWith('Year') ? lines.slice(1) : lines;
+
+      const file = result.assets[0];
+      const isExcel = /\.xlsx?$/i.test(file.name ?? '');
+
+      let rows: unknown[][];
+      if (isExcel) {
+        const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
+        const workbook = XLSX.read(base64, { type: 'base64' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '' });
+      } else {
+        const text = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.UTF8 });
+        rows = text.split(/\r?\n/).filter(Boolean).map(parseCsvLine);
+      }
+
+      const dataRows = rows.length > 0 && isHeaderRow(rows[0]) ? rows.slice(1) : rows;
 
       let imported = 0;
       const db = getDb();
       db.withTransactionSync(() => {
-        for (const line of dataLines) {
-          const cols = parseCsvLine(line);
-          if (cols.length < 6) continue;
-          const [year, month, day, item, categoryRaw, amountRaw] = cols;
-          const date = `${year.padStart(4, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        for (const cols of dataRows) {
+          if (!cols || cols.length < 6) continue;
+          const [yearRaw, monthRaw, dayRaw, itemRaw, categoryRaw, amountRaw] = cols.map((c) => String(c ?? '').trim());
+          const year = parseInt(yearRaw, 10);
+          const month = parseInt(monthRaw, 10);
+          const day = parseInt(dayRaw, 10);
+          if (!year || !month || !day) continue;
+          const date = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const category = resolveCategory(categoryRaw);
           if (!category) continue;
           const amount = parseFloat(amountRaw);
           if (isNaN(amount)) continue;
-          createTransaction({ date, item, category, amount_cents: dollarsToCents(amount) });
+          createTransaction({ date, item: itemRaw, category, amount_cents: dollarsToCents(amount) });
           imported++;
         }
       });
@@ -92,65 +124,12 @@ export default function SettingsScreen() {
     }
   }
 
-  async function handleBackupJson() {
-    try {
-      const txs = getAllTransactions();
-      const json = JSON.stringify({ version: 1, exported_at: new Date().toISOString(), transactions: txs }, null, 2);
-      const path = FileSystem.cacheDirectory + `centsyve_backup_${todayISO()}.json`;
-      await FileSystem.writeAsStringAsync(path, json, { encoding: FileSystem.EncodingType.UTF8 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(path, { mimeType: 'application/json', dialogTitle: 'Backup JSON' });
-      }
-      Alert.alert(t('settings.backupSuccess'));
-    } catch (e: any) {
-      Alert.alert(t('common.error'), String(e));
-    }
-  }
-
-  async function handleRestoreJson() {
-    Alert.alert(t('settings.restoreConfirm'), '', [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('common.confirm'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            const result = await DocumentPicker.getDocumentAsync({ type: 'application/json', copyToCacheDirectory: true });
-            if (result.canceled) return;
-            const text = await FileSystem.readAsStringAsync(result.assets[0].uri, { encoding: FileSystem.EncodingType.UTF8 });
-            const data = JSON.parse(text);
-            if (!Array.isArray(data.transactions)) throw new Error('Invalid backup format');
-
-            const db = getDb();
-            db.withTransactionSync(() => {
-              const existing = getAllTransactions();
-              for (const tx of existing) deleteTransaction(tx.id);
-              for (const tx of data.transactions) {
-                createTransaction({
-                  date: tx.date,
-                  item: tx.item,
-                  category: tx.category,
-                  amount_cents: tx.amount_cents,
-                  recurring_id: tx.recurring_id,
-                });
-              }
-            });
-            loadTransactions();
-            Alert.alert(t('settings.restoreSuccess'));
-          } catch (e: any) {
-            Alert.alert(t('common.error'), String(e));
-          }
-        },
-      },
-    ]);
-  }
-
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.sectionHeader}>{t('settings.title')}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>CSV</Text>
+        <Text style={styles.cardTitle}>{t('settings.dataSection')}</Text>
 
         <TouchableOpacity style={styles.row} onPress={handleExportCsv}>
           <Text style={styles.rowLabel}>{t('settings.exportCsv')}</Text>
@@ -159,28 +138,12 @@ export default function SettingsScreen() {
 
         <View style={styles.divider} />
 
-        <TouchableOpacity style={styles.row} onPress={handleImportCsv}>
+        <TouchableOpacity style={styles.row} onPress={handleImport}>
           <View style={styles.rowLeft}>
-            <Text style={styles.rowLabel}>{t('settings.importCsv')}</Text>
+            <Text style={styles.rowLabel}>{t('settings.import')}</Text>
             <Text style={styles.rowHint}>{t('settings.importHint')}</Text>
           </View>
           <Text style={styles.rowArrow}>›</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>JSON Backup</Text>
-
-        <TouchableOpacity style={styles.row} onPress={handleBackupJson}>
-          <Text style={styles.rowLabel}>{t('settings.backupJson')}</Text>
-          <Text style={styles.rowArrow}>›</Text>
-        </TouchableOpacity>
-
-        <View style={styles.divider} />
-
-        <TouchableOpacity style={styles.row} onPress={handleRestoreJson}>
-          <Text style={styles.rowLabel}>{t('settings.restoreJson')}</Text>
-          <Text style={[styles.rowArrow, { color: '#EF4444' }]}>›</Text>
         </TouchableOpacity>
       </View>
 
@@ -237,7 +200,6 @@ const styles = StyleSheet.create({
   rowLeft: { flex: 1 },
   rowLabel: { fontSize: 16, color: '#1E293B' },
   rowHint: { fontSize: 12, color: '#94A3B8', marginTop: 2 },
-  rowHintInline: { fontSize: 12, color: '#94A3B8' },
   rowArrow: { fontSize: 20, color: '#CBD5E1' },
   activeIndicator: { fontSize: 16, color: '#2563EB', fontWeight: '700' },
 });

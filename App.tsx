@@ -5,7 +5,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 
 import { initDatabase, getDb } from './src/db/database';
-import { importSeedData } from './src/db/seed';
 import { runCatchUpPosting } from './src/db/recurring';
 import { useTransactionStore } from './src/store/useTransactionStore';
 import { useRecurringStore } from './src/store/useRecurringStore';
@@ -29,7 +28,6 @@ export default function App() {
   useEffect(() => {
     async function boot() {
       await initDatabase();
-      importSeedData();
       runCatchUpPosting();
       loadTransactions();
       loadRecurring();
