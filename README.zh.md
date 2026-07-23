@@ -12,11 +12,12 @@
 - **固定支出** — 设置每月固定账单（房租、手机费等），到期自动记账。
 - **中英双语** — 支持完整的中英文界面，可在设置中切换。
 - **数据导出** — 支持导出 CSV，导入 CSV 或 Excel（.xlsx）文件。
-- **完全离线** — 无需账号、无需服务器、无需网络，所有数据本地存储。
+- **Google 表格同步** — 可选连接 Google 表格，双向同步账单数据，若同一笔账单在两端都被修改会提示冲突供你选择。
+- **本地优先** — 数据默认只存储在设备本地，无需账号或网络，除非你开启 Google 表格同步。
 
 ## 下载
 
-[下载 APK](https://expo.dev/artifacts/eas/vsWAy4EjGnYAkvqz1cV5JOOR3QOop5In_0s63g20uAg.apk)
+[下载 APK](https://expo.dev/artifacts/eas/dDUiUJAYROaMwbGwdAy5q_EVij7PlumGmtG0SkMPbtA.apk)
 
 ## 技术栈
 
