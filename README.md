@@ -12,9 +12,9 @@ A fully offline personal expense tracking mobile app built with React Native and
 - **Recurring Bills** — Define monthly recurring expenses (rent, phone, etc.) that auto-post on their due date every month.
 - **Bilingual** — Full English and Mandarin Chinese support, switchable in Settings.
 - **Data portability** — Export to CSV, import from CSV or Excel (.xlsx).
+- **Local-first** — All data lives on your device by default; no account or internet needed unless you turn on Google Sheets sync.
 - **Google Sheets sync** — Optionally connect a Google Sheet and sync transactions both ways, with conflict detection if the same transaction changed on both sides.
   - This app is mainly for personal use, so Google Sheets sync is only available to authorized users. If you'd like to try this feature, contact the developer at loganyuan6@gmail.com.
-- **Local-first** — All data lives on your device by default; no account or internet needed unless you turn on Google Sheets sync.
 
 ## Download
 
