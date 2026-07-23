@@ -13,11 +13,12 @@
 - **中英双语** — 支持完整的中英文界面，可在设置中切换。
 - **数据导出** — 支持导出 CSV，导入 CSV 或 Excel（.xlsx）文件。
 - **Google 表格同步** — 可选连接 Google 表格，双向同步账单数据，若同一笔账单在两端都被修改会提示冲突供你选择。
+  - 本应用主要供个人使用，因此 Google 表格同步功能仅对授权用户开放。如果你想体验此功能，请联系开发者：loganyuan6@gmail.com。
 - **本地优先** — 数据默认只存储在设备本地，无需账号或网络，除非你开启 Google 表格同步。
 
 ## 下载
 
-[下载 APK](https://expo.dev/artifacts/eas/dDUiUJAYROaMwbGwdAy5q_EVij7PlumGmtG0SkMPbtA.apk)
+[下载 APK](https://expo.dev/artifacts/eas/HLwC0N4y3oTfTaxRZgRvz8fA7Jyh1IZcq5uol4LoEYc.apk)
 
 ## 技术栈
 

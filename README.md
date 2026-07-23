@@ -13,11 +13,12 @@ A fully offline personal expense tracking mobile app built with React Native and
 - **Bilingual** — Full English and Mandarin Chinese support, switchable in Settings.
 - **Data portability** — Export to CSV, import from CSV or Excel (.xlsx).
 - **Google Sheets sync** — Optionally connect a Google Sheet and sync transactions both ways, with conflict detection if the same transaction changed on both sides.
+  - This app is mainly for personal use, so Google Sheets sync is only available to authorized users. If you'd like to try this feature, contact the developer at loganyuan6@gmail.com.
 - **Local-first** — All data lives on your device by default; no account or internet needed unless you turn on Google Sheets sync.
 
 ## Download
 
-[Download APK](https://expo.dev/artifacts/eas/dDUiUJAYROaMwbGwdAy5q_EVij7PlumGmtG0SkMPbtA.apk)
+[Download APK](https://expo.dev/artifacts/eas/HLwC0N4y3oTfTaxRZgRvz8fA7Jyh1IZcq5uol4LoEYc.apk)
 
 ## Tech Stack
 
